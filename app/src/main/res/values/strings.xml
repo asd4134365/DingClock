@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">DingClock</string>
+
+    <string name="accessibility_description">开启辅助功能</string>
+
+    <string name="btn_cancel">删除闹钟</string>
+    <string name="btn_test">测试</string>
+    <string name="btn_start">启动闹钟</string>
+    <string name="btn_set">设置时间</string>
+    <string name="btn_del">删除时间</string>
+</resources>
