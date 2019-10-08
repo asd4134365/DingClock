@@ -41,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String dingPackageName = "com.alibaba.android.rimet";
 
-    private Integer defaultTime[][] = {{8,30},{12,01},{13,01},{18,01}};
+    private Integer defaultTime[][] = {{8,30},{12,00},{12,10},{18,01}};
     private List<TimeBean> timeData = new ArrayList<>();
     private Calendar calendar = Calendar.getInstance();
 
