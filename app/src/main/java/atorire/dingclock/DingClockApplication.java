@@ -14,8 +14,8 @@ public class DingClockApplication extends Application {
 
 
     public String[] getLogData() {
-        SharedPreferences sp = getSharedPreferences("logData", Context.MODE_PRIVATE);
-        String logStr = sp.getString("log", null);
+        SharedPreferences sp = getSharedPreferences(KEYS.Storage.data, Context.MODE_PRIVATE);
+        String logStr = sp.getString(KEYS.Storage.data_log, null);
 
         return logStr!=null?logStr.split(","):null;
     }
@@ -29,10 +29,8 @@ public class DingClockApplication extends Application {
                 data = "【" + resultTime + "】打卡成功";
             }
 
-//            logData.add(data);
-
-            SharedPreferences sp = getSharedPreferences("logData", Context.MODE_PRIVATE);
-            String logStr = sp.getString("log", null);
+            SharedPreferences sp = getSharedPreferences(KEYS.Storage.data, Context.MODE_PRIVATE);
+            String logStr = sp.getString(KEYS.Storage.data_log, null);
 
             if(logStr==null || logStr.length()<=0){
                 logStr = data;

@@ -6,8 +6,10 @@ import atorire.dingclock.bean.TimeBean;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.KeyguardManager;
 import android.app.PendingIntent;
 import android.app.TimePickerDialog;
+import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -19,6 +21,9 @@ import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.PowerManager;
+import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,7 +44,9 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private String dingPackageName = "com.alibaba.android.rimet";
+    private DevicePolicyManager policyManager;
+    private ComponentName adminReceiver;
+
 
     private Integer defaultTime[][] = {{8,30},{12,00},{12,10},{18,01}};
     private List<TimeBean> timeData = new ArrayList<>();
@@ -53,6 +60,20 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         timeData = getData();
+
+        //获取设备管理服务
+        policyManager = (DevicePolicyManager)  getApplicationContext().getSystemService(Context.DEVICE_POLICY_SERVICE);
+        adminReceiver = new ComponentName(this, ScreenOffAdminReceiver.class);
+        if (!policyManager.isAdminActive(adminReceiver)) {
+            Util.showToast(this,"需要开启设备管理服务");
+            activeManage();
+        }
+
+        if (!isAccessibilitySettingsOn(this)) {
+            Util.showToast(this,"需要开启辅助功能，找到DingClock，点击开启");
+            Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            startActivity(intent);
+        }
 
         Button btnCancel,btnStart, btnTest;
         clockTable = findViewById(R.id.clock_table);
@@ -70,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
                 // TODO Auto-generated method stub
                 calendar.setTimeInMillis(System.currentTimeMillis());
 
-                calendar.add(Calendar.SECOND, 5);
+                calendar.add(Calendar.SECOND, 3);
 //                calendar.set(Calendar.HOUR_OF_DAY, 12);
 //                calendar.set(Calendar.MINUTE, 01);
 //                calendar.set(Calendar.SECOND, 0);
@@ -83,9 +104,10 @@ public class MainActivity extends AppCompatActivity {
                 AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
                 String tmpS = "设置闹钟时间为" + Util.format(calendar.get(Calendar.HOUR_OF_DAY)) + ":" + Util.format(calendar.get(Calendar.MINUTE));
-//                            info.setText(tmpS);
-                Log.d("tag","123123--》"+tmpS);
 
+                Log.e("tag","123123--》"+tmpS);
+
+                policyManager.lockNow();
             }
         });
 
@@ -104,6 +126,59 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * 检测辅助功能是否开启<br>
+     * 方 法 名：isAccessibilitySettingsOn <br>
+     * 创 建 人 <br>
+     * 创建时间：2016-6-22 下午2:29:24 <br>
+     * 修 改 人： <br>
+     * 修改日期： <br>
+     * @param mContext
+     * @return boolean
+     */
+    private boolean isAccessibilitySettingsOn(Context mContext) {
+        int accessibilityEnabled = 0;
+        // TestService为对应的服务
+        final String service = getPackageName() + "/" + DingClockService.class.getCanonicalName();
+        Log.i(KEYS.TAG, "service:" + service);
+        try {
+            accessibilityEnabled = Settings.Secure.getInt(mContext.getApplicationContext().getContentResolver(),
+                    android.provider.Settings.Secure.ACCESSIBILITY_ENABLED);
+            Log.v(KEYS.TAG, "accessibilityEnabled = " + accessibilityEnabled);
+        } catch (Settings.SettingNotFoundException e) {
+            Log.e(KEYS.TAG, "Error finding setting, default accessibility to not found: " + e.getMessage());
+        }
+        TextUtils.SimpleStringSplitter mStringColonSplitter = new TextUtils.SimpleStringSplitter(':');
+
+        if (accessibilityEnabled == 1) {
+            Log.v(KEYS.TAG, "***ACCESSIBILITY IS ENABLED*** -----------------");
+            String settingValue = Settings.Secure.getString(mContext.getApplicationContext().getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+            if (settingValue != null) {
+                mStringColonSplitter.setString(settingValue);
+                while (mStringColonSplitter.hasNext()) {
+                    String accessibilityService = mStringColonSplitter.next();
+                    Log.v(KEYS.TAG, "-------------- > accessibilityService :: " + accessibilityService + " " + service);
+                    if (accessibilityService.equalsIgnoreCase(service)) {
+                        Log.v(KEYS.TAG, "We've found the correct setting - accessibility is switched on!");
+                        return true;
+                    }
+                }
+            }
+        } else {
+            Log.v(KEYS.TAG, "***ACCESSIBILITY IS DISABLED***");
+        }
+        return false;
+    }
+    private void activeManage(){
+        // 启动设备管理(隐式Intent) - 在AndroidManifest.xml中设定相应过滤器
+        Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+        //权限列表
+        intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminReceiver);
+        //描述(additional explanation)
+        intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "激活后才能使用锁屏功能");
+        startActivityForResult(intent, 0);
+    }
+
     private void setAlarmOn(TimeBean timeBean){
 
         boolean isNextDay = false;
@@ -119,8 +194,8 @@ public class MainActivity extends AppCompatActivity {
             calendar.add(Calendar.DAY_OF_MONTH,1);
         }
 
-        // TODO test
-        // calendar.add(Calendar.SECOND, 30);
+        // TODO test 3s后执行打卡
+//         calendar.add(Calendar.SECOND, 3);
         calendar.set(Calendar.HOUR_OF_DAY, time.getHour());
         calendar.set(Calendar.MINUTE, time.getMinute());
         calendar.set(Calendar.SECOND, 0);
@@ -145,9 +220,10 @@ public class MainActivity extends AppCompatActivity {
     private List<TimeBean> getData(){
         List<TimeBean> timeList = new ArrayList<>();
 
-        SharedPreferences sp = getSharedPreferences("data",Context.MODE_PRIVATE);
-        String time = sp.getString("time", null);
-
+        SharedPreferences sp = getSharedPreferences(KEYS.Storage.data,Context.MODE_PRIVATE);
+        String time = sp.getString(KEYS.Storage.data_time, null);
+//        重制时间
+//        String time =  null;
         if(time==null){
             for (Integer[] t : defaultTime){
                 timeList.add(new TimeBean(t[0],t[1]));
@@ -178,8 +254,8 @@ public class MainActivity extends AppCompatActivity {
             data += text+";";
         }
         sort(timeData);
-        SharedPreferences sp = getSharedPreferences("data",Context.MODE_PRIVATE);
-        sp.edit().putString("time", data).commit();
+        SharedPreferences sp = getSharedPreferences(KEYS.Storage.data,Context.MODE_PRIVATE);
+        sp.edit().putString(KEYS.Storage.data_time , data).commit();
     }
 
     /**
@@ -281,51 +357,47 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String callClockTime = "";
+
     /**
      * 窗口恢复
      */
     @Override
     protected void onResume() {
         super.onResume();
-        boolean callClock = getIntent().getBooleanExtra("callClock", false);
-        String callClockTime = getIntent().getStringExtra("callClockTime");
 
         addLog2View();
 
-        if(!this.callClockTime.equals(callClockTime) && callClock){
-            this.callClockTime = callClockTime;
+        int callClock = -1;
+        if(getIntent()!=null)
+            callClock = getIntent().getIntExtra(KEYS.Intent.callClock, -1);
 
-            // 清空旧定时任务
-            Util.clearAlarm(this,AlarmReceiver.class,0);
-            // 获取下一个定时任务时间
-            TimeBean timeBean = getNearestTimeBean();
-            // 设置下一个定时任务
-            setAlarmOn(timeBean);
-            // 启动钉钉
-            callDingDing();
+        Log.e(KEYS.TAG,"--->"+callClock);
 
-//            //调起自己，避免执行定时后必须关闭才能无法打开的问题
-//            new Handler().postDelayed(new Runnable(){
-//                public void run() {
-//                    callSelf();
-//                }
-//            }, 5*1000);
+        if(callClock==0){
+            String callClockTime = getIntent().getStringExtra(KEYS.Intent.callClockTime);
+            if(!this.callClockTime.equals(callClockTime)){// 时间
+                this.callClockTime = callClockTime;
 
+                // 清空旧定时任务
+                Util.clearAlarm(this,AlarmReceiver.class,0);
+                // 获取下一个定时任务时间
+                TimeBean timeBean = getNearestTimeBean();
+                // 设置下一个定时任务
+                setAlarmOn(timeBean);
+                // 启动钉钉
+                Util.callDingDing(this);
+            }
+        }else if(callClock==1){
+            // 2s后回到主页面, 并熄灭屏幕
+            new Handler().postDelayed(new Runnable(){
+                public void run() {
+                    callHome();
+                    policyManager.lockNow();
+                }
+            }, 2*1000);
         }
+        setIntent(null);
     }
-
-//    private void callSelf(){
-//        PackageManager packageManager = this.getPackageManager();
-//        Intent intent= packageManager.getLaunchIntentForPackage("atorire.dingclock");
-//        startActivity(intent);
-//
-//        // 1s后回到主页面
-//        new Handler().postDelayed(new Runnable(){
-//            public void run() {
-//                callHome();
-//            }
-//        }, 1000);
-//    }
 
     private void addLog2View(){
         DingClockApplication app = (DingClockApplication)getApplication();
@@ -364,32 +436,5 @@ public class MainActivity extends AppCompatActivity {
         return list;
     }
 
-    public void callDingDing(){
-        DingClockService.setStepReady();
-        try{
-            PackageInfo pi = getPackageManager().getPackageInfo(dingPackageName, 0);
-            Intent resolveIntent = new Intent(Intent.ACTION_MAIN, null);
-            resolveIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-            resolveIntent.setPackage(pi.packageName);
 
-            List<ResolveInfo> apps = getPackageManager().queryIntentActivities(resolveIntent, 0);
-
-            ResolveInfo ri = apps.iterator().next();
-            if (ri != null ) {
-                dingPackageName = ri.activityInfo.packageName;
-                String className = ri.activityInfo.name;
-
-                Intent intent = new Intent(Intent.ACTION_MAIN);
-                intent.addCategory(Intent.CATEGORY_LAUNCHER);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                ComponentName cn = new ComponentName(dingPackageName, className);
-
-                intent.setComponent(cn);
-                startActivity(intent);
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-            Toast.makeText(MainActivity.this, "error:"+e.getMessage(), Toast.LENGTH_LONG).show();
-        }
-    }
 }
