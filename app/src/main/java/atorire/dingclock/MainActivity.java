@@ -3,10 +3,7 @@ package atorire.dingclock;
 import androidx.appcompat.app.AppCompatActivity;
 import atorire.dingclock.bean.TimeBean;
 
-import android.annotation.TargetApi;
-import android.app.Activity;
 import android.app.AlarmManager;
-import android.app.KeyguardManager;
 import android.app.PendingIntent;
 import android.app.TimePickerDialog;
 import android.app.admin.DevicePolicyManager;
@@ -14,14 +11,8 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
-import android.media.projection.MediaProjectionManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.PowerManager;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
@@ -33,13 +24,11 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.TimePicker;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -48,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
     private ComponentName adminReceiver;
 
 
-    private Integer defaultTime[][] = {{8,30},{12,00},{12,10},{18,01}};
+    private Integer defaultTime[][] = {{8,30},{12,00},{12,10},{18,00}};
     private List<TimeBean> timeData = new ArrayList<>();
     private Calendar calendar = Calendar.getInstance();
 
@@ -133,39 +122,39 @@ public class MainActivity extends AppCompatActivity {
      * 创建时间：2016-6-22 下午2:29:24 <br>
      * 修 改 人： <br>
      * 修改日期： <br>
-     * @param mContext
+     * @param mContext c
      * @return boolean
      */
     private boolean isAccessibilitySettingsOn(Context mContext) {
         int accessibilityEnabled = 0;
         // TestService为对应的服务
         final String service = getPackageName() + "/" + DingClockService.class.getCanonicalName();
-        Log.i(KEYS.TAG, "service:" + service);
+        Log.i(K.TAG, "service:" + service);
         try {
             accessibilityEnabled = Settings.Secure.getInt(mContext.getApplicationContext().getContentResolver(),
                     android.provider.Settings.Secure.ACCESSIBILITY_ENABLED);
-            Log.v(KEYS.TAG, "accessibilityEnabled = " + accessibilityEnabled);
+            Log.v(K.TAG, "accessibilityEnabled = " + accessibilityEnabled);
         } catch (Settings.SettingNotFoundException e) {
-            Log.e(KEYS.TAG, "Error finding setting, default accessibility to not found: " + e.getMessage());
+            Log.e(K.TAG, "Error finding setting, default accessibility to not found: " + e.getMessage());
         }
         TextUtils.SimpleStringSplitter mStringColonSplitter = new TextUtils.SimpleStringSplitter(':');
 
         if (accessibilityEnabled == 1) {
-            Log.v(KEYS.TAG, "***ACCESSIBILITY IS ENABLED*** -----------------");
+            Log.v(K.TAG, "***ACCESSIBILITY IS ENABLED*** -----------------");
             String settingValue = Settings.Secure.getString(mContext.getApplicationContext().getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
             if (settingValue != null) {
                 mStringColonSplitter.setString(settingValue);
                 while (mStringColonSplitter.hasNext()) {
                     String accessibilityService = mStringColonSplitter.next();
-                    Log.v(KEYS.TAG, "-------------- > accessibilityService :: " + accessibilityService + " " + service);
+                    Log.v(K.TAG, "-------------- > accessibilityService :: " + accessibilityService + " " + service);
                     if (accessibilityService.equalsIgnoreCase(service)) {
-                        Log.v(KEYS.TAG, "We've found the correct setting - accessibility is switched on!");
+                        Log.v(K.TAG, "We've found the correct setting - accessibility is switched on!");
                         return true;
                     }
                 }
             }
         } else {
-            Log.v(KEYS.TAG, "***ACCESSIBILITY IS DISABLED***");
+            Log.v(K.TAG, "***ACCESSIBILITY IS DISABLED***");
         }
         return false;
     }
@@ -220,10 +209,10 @@ public class MainActivity extends AppCompatActivity {
     private List<TimeBean> getData(){
         List<TimeBean> timeList = new ArrayList<>();
 
-        SharedPreferences sp = getSharedPreferences(KEYS.Storage.data,Context.MODE_PRIVATE);
-        String time = sp.getString(KEYS.Storage.data_time, null);
-//        重制时间
-//        String time =  null;
+        SharedPreferences sp = getSharedPreferences(K.Storage.data,Context.MODE_PRIVATE);
+//        String time = sp.getString(K.Storage.data_time, null);
+        // 重制时间
+         String time =  null;
         if(time==null){
             for (Integer[] t : defaultTime){
                 timeList.add(new TimeBean(t[0],t[1]));
@@ -254,8 +243,8 @@ public class MainActivity extends AppCompatActivity {
             data += text+";";
         }
         sort(timeData);
-        SharedPreferences sp = getSharedPreferences(KEYS.Storage.data,Context.MODE_PRIVATE);
-        sp.edit().putString(KEYS.Storage.data_time , data).commit();
+        SharedPreferences sp = getSharedPreferences(K.Storage.data,Context.MODE_PRIVATE);
+        sp.edit().putString(K.Storage.data_time , data).commit();
     }
 
     /**
@@ -339,7 +328,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * 获取最近的时间
-     * @return
+     * @return bean
      */
     private TimeBean getNearestTimeBean(){
         long timeMillies = System.currentTimeMillis();
@@ -369,12 +358,14 @@ public class MainActivity extends AppCompatActivity {
 
         int callClock = -1;
         if(getIntent()!=null)
-            callClock = getIntent().getIntExtra(KEYS.Intent.callClock, -1);
+            callClock = getIntent().getIntExtra(K.Intent.callClock, -1);
 
-        Log.e(KEYS.TAG,"--->"+callClock);
+        Log.e(K.TAG,"--->"+callClock);
 
         if(callClock==0){
-            String callClockTime = getIntent().getStringExtra(KEYS.Intent.callClockTime);
+            Util.doLog(this,"--开始打卡--", K.LogCode.flowLog);
+
+            String callClockTime = getIntent().getStringExtra(K.Intent.callClockTime);
             if(!this.callClockTime.equals(callClockTime)){// 时间
                 this.callClockTime = callClockTime;
 
@@ -393,6 +384,7 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
                     callHome();
                     policyManager.lockNow();
+                    Util.doLog(MainActivity.this,"--打卡结束--", K.LogCode.flowLog);
                 }
             }, 2*1000);
         }
@@ -400,9 +392,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void addLog2View(){
-        DingClockApplication app = (DingClockApplication)getApplication();
-
-        String[] logData = app.getLogData();
+        String[] logData = Util.getLog(this);
         if(logData!=null){
             LinearLayout ll = findViewById(R.id.log_scroll_layout);
             ll.removeAllViews();
@@ -411,6 +401,10 @@ public class MainActivity extends AppCompatActivity {
                 LinearLayout.LayoutParams tv_layout = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 textView.setLayoutParams(tv_layout);
                 textView.setText(logData[i]);
+                if((logData[i]+"").indexOf("【打卡日志】")>0){
+
+                    textView.setTextColor(getResources().getColor(R.color.colorCheckInLogTxt,null));
+                }
                 ll.addView(textView);
             }
         }
@@ -425,7 +419,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * key排序，由大到小
-     * @return
+     * @return list
      */
     public static List<TimeBean> sort(List<TimeBean> list) {
         Collections.sort(list, new Comparator<TimeBean>() {

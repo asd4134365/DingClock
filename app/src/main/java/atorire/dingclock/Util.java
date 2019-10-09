@@ -1,9 +1,11 @@
 package atorire.dingclock;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.KeyguardManager;
 import android.app.PendingIntent;
+import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -21,12 +23,11 @@ import java.util.List;
 import atorire.dingclock.bean.TimeBean;
 
 public class Util {
-
     /**
      * 清除闹铃
-     * @param context
-     * @param receiver
-     * @param requestCode
+     * @param context context
+     * @param receiver receiver
+     * @param requestCode code
      */
     static void clearAlarm(Context context, Class<?> receiver, int requestCode){
         Intent intent = new Intent(context, receiver);
@@ -36,20 +37,20 @@ public class Util {
         if(pendingIntent!=null) {
             pendingIntent.cancel();
             // 获取闹钟管理实例
-            AlarmManager am = (AlarmManager) context.getSystemService(context.ALARM_SERVICE);
+            AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
             // 取消
             am.cancel(pendingIntent);
         }
     }
 
-    public static String getDateStr(){
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+    static String getDateStr(){
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         return sdf.format(new Date());
     }
     /**
      * 格式化字符串7:3-->07:03
-     * @param x x
-     * @return
+     * @param x 数字
+     * @return 数字格式化补0
      */
     public static String format(int x) {
         String s = "" + x;
@@ -102,9 +103,9 @@ public class Util {
     }
     /**
      * 屏幕唤醒
-     * @param context
+     * @param context context
      */
-    public static void wakeUpAndUnlock(Context context){
+    static void wakeUpAndUnlock(Context context){
         //屏锁管理器
         KeyguardManager km= (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
         KeyguardManager.KeyguardLock kl = km.newKeyguardLock("unLock");
@@ -119,4 +120,22 @@ public class Util {
         //释放
         wl.release();
     }
+
+
+    static String[] getLog(Activity a){
+        DingClockApplication app = (DingClockApplication)a.getApplication();
+        return app.getLogData();
+    }
+    static void doLog(Service s, String data, int resultCode){
+        DingClockApplication app = (DingClockApplication)s.getApplication();
+        doLog(app,data,resultCode);
+    }
+    static void doLog(Activity a, String data, int resultCode){
+        DingClockApplication app = (DingClockApplication)a.getApplication();
+        doLog(app,data,resultCode);
+    }
+    private static void doLog(DingClockApplication app, String data, int resultCode){
+        app.addData(data, resultCode);
+    }
+
 }
