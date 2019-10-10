@@ -10,14 +10,6 @@ public class AlarmReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.d(K.TAG, "on receiver [" + Util.getDateStr() + "]");
-
-        Util.wakeUpAndUnlock(context);
-
-        Intent i = new Intent(context, MainActivity.class);
-        i.putExtra(K.Intent.callClock,0);
-        i.putExtra(K.Intent.callClockTime, Util.getDateStr());
-        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-
-        context.startActivity(i);
+        Util.callSelfAndDoCheckIn(context,false);
     }
 }

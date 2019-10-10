@@ -1,6 +1,5 @@
 package atorire.dingclock;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.KeyguardManager;
@@ -26,12 +25,12 @@ public class Util {
     /**
      * 清除闹铃
      * @param context context
-     * @param receiver receiver
-     * @param requestCode code
      */
-    static void clearAlarm(Context context, Class<?> receiver, int requestCode){
-        Intent intent = new Intent(context, receiver);
+    static void clearAlarm(Context context){
+        Intent intent = new Intent(context, AlarmReceiver.class);
 
+        // requestCode 定时器的编号
+        int requestCode = 0;
         // FLAG_NO_CREATE表示如果描述的pi不存在，则返回null，而不是创建它。
         PendingIntent pendingIntent = PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_NO_CREATE);
         if(pendingIntent!=null) {
@@ -52,7 +51,7 @@ public class Util {
      * @param x 数字
      * @return 数字格式化补0
      */
-    public static String format(int x) {
+    public static String formatInteger(int x) {
         String s = "" + x;
         if (s.length() == 1) {
             s = "0" + s;
@@ -60,6 +59,10 @@ public class Util {
         return s;
     }
 
+    /**
+     * key排序，由大到小
+     * @return list
+     */
     static List<TimeBean> sort(List<TimeBean> list) {
         Collections.sort(list, new Comparator<TimeBean>() {
             public int compare(TimeBean o1, TimeBean o2) {
@@ -68,14 +71,48 @@ public class Util {
         });
         return list;
     }
-
     static void showToast(Context context, String msg){
         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
     }
 
-    static void callDingDing(Context context){
-        String dingPackageName = "com.alibaba.android.rimet";
-        DingClockService.setStepReady();
+    /**
+     * 返回主页
+     */
+    static void callHome(Context c){
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_MAIN);// "android.intent.action.MAIN"
+        intent.addCategory(Intent.CATEGORY_HOME); //"android.intent.category.HOME"
+        c.startActivity(intent);
+    }
+
+    /**
+     * 回调主程序执行打卡
+     * @param c context
+     */
+    static void callSelfAndDoCheckIn(Context c,boolean isGetLogData){
+        // 屏幕解锁
+        Util.wakeUpAndUnlock(c);
+        // 唤起主程序
+        Intent i = new Intent(c, MainActivity.class);
+        i.putExtra(K.Intent.callClock, K.Intent.callClock_Wakeup);
+        i.putExtra(K.Intent.isGetLogData, isGetLogData);
+        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        c.startActivity(i);
+    }
+
+    static void callSelfWhenCheckInFinish(Context context){
+        // 唤起主程序
+        Intent i = new Intent(context, MainActivity.class);
+        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        i.putExtra(K.Intent.callClock,K.Intent.callClock_Recall);
+        context.startActivity(i);
+    }
+
+    static void callDingDing(Context context, boolean isGetLogAction){
+        String dingPackageName = K.DingDingPackage;
+
+        DingClockService.setStepReady(isGetLogAction);
+
         try{
             PackageInfo pi = context.getPackageManager().getPackageInfo(dingPackageName, 0);
             Intent resolveIntent = new Intent(Intent.ACTION_MAIN, null);

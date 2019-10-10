@@ -6,10 +6,6 @@ import android.content.SharedPreferences;
 
 public class DingClockApplication extends Application {
 
-//    private List<String> logData = new ArrayList<>();
-
-
-
     public String[] getLogData() {
         SharedPreferences sp = getSharedPreferences(K.Storage.data, Context.MODE_PRIVATE);
         String logStr = sp.getString(K.Storage.data_log, null);

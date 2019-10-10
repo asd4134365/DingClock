@@ -27,19 +27,12 @@ import android.widget.TimePicker;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     private DevicePolicyManager policyManager;
     private ComponentName adminReceiver;
-
-
-    private Integer defaultTime[][] = {{8,30},{12,00},{12,10},{18,00}};
-    private List<TimeBean> timeData = new ArrayList<>();
-    private Calendar calendar = Calendar.getInstance();
 
     private TableLayout clockTable;
 
@@ -48,7 +41,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        timeData = getData();
+        // 时间list
+        List<TimeBean> timeData = getData();
 
         //获取设备管理服务
         policyManager = (DevicePolicyManager)  getApplicationContext().getSystemService(Context.DEVICE_POLICY_SERVICE);
@@ -70,13 +64,14 @@ public class MainActivity extends AppCompatActivity {
         btnCancel = findViewById(R.id.btn_cancel);
         btnTest = findViewById(R.id.testbtn);
 
-        for(int i =0;i<timeData.size() || i<4;i++){
-            createTable(i);
+        for(int i =0; i<timeData.size() || i<4; i++){
+            createTable(timeData.get(i));
         }
 
         btnTest.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Calendar calendar = Calendar.getInstance();
                 // TODO Auto-generated method stub
                 calendar.setTimeInMillis(System.currentTimeMillis());
 
@@ -92,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
                 // 获取闹钟管理的实例
                 AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
-                String tmpS = "设置闹钟时间为" + Util.format(calendar.get(Calendar.HOUR_OF_DAY)) + ":" + Util.format(calendar.get(Calendar.MINUTE));
+                String tmpS = "设置闹钟时间为" + Util.formatInteger(calendar.get(Calendar.HOUR_OF_DAY)) + ":" + Util.formatInteger(calendar.get(Calendar.MINUTE));
 
                 Log.e("tag","123123--》"+tmpS);
 
@@ -103,14 +98,14 @@ public class MainActivity extends AppCompatActivity {
         btnStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                setData();
-                setAlarmOn(getNearestTimeBean());
+                setAlarmOn();
             }
         });
         btnCancel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                setAlarmOff();
+                Util.clearAlarm(MainActivity.this);
+                Util.showToast(MainActivity.this,"清除定时任务");
             }
         });
     }
@@ -158,6 +153,9 @@ public class MainActivity extends AppCompatActivity {
         }
         return false;
     }
+    /**
+     * 开启设备管理
+     */
     private void activeManage(){
         // 启动设备管理(隐式Intent) - 在AndroidManifest.xml中设定相应过滤器
         Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
@@ -168,229 +166,9 @@ public class MainActivity extends AppCompatActivity {
         startActivityForResult(intent, 0);
     }
 
-    private void setAlarmOn(TimeBean timeBean){
-
-        boolean isNextDay = false;
-        // 打开界面-点击开始，不知道上次执行的时间
-        // 取最近的
-        TimeBean time = timeBean;
-        if(time == null) {
-            isNextDay = true;
-            time = timeData.get(0);
-        }
-        calendar.setTimeInMillis(System.currentTimeMillis());
-        if(isNextDay){
-            calendar.add(Calendar.DAY_OF_MONTH,1);
-        }
-
-        // TODO test 3s后执行打卡
-//         calendar.add(Calendar.SECOND, 3);
-        calendar.set(Calendar.HOUR_OF_DAY, time.getHour());
-        calendar.set(Calendar.MINUTE, time.getMinute());
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        Log.e("tag","next time: "+calendar.getTime());
-
-        // 建立Intent和PendingIntent来调用目标组件
-        Intent intent = new Intent(this, AlarmReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(MainActivity.this, 0, intent, 0);
-        // 获取闹钟管理的实例
-        AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
-        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
-
-        String msg = "设置闹钟时间为 "+Util.format(calendar.get(Calendar.MONTH)+1)+"-"+Util.format(calendar.get(Calendar.DAY_OF_MONTH))+" " +
-                Util.format(calendar.get(Calendar.HOUR_OF_DAY)) + ":" + Util.format(calendar.get(Calendar.MINUTE));
-
-        Util.showToast(this, msg);
-        callHome();
-    }
-
-    //获取存储的时间数据
-    private List<TimeBean> getData(){
-        List<TimeBean> timeList = new ArrayList<>();
-
-        SharedPreferences sp = getSharedPreferences(K.Storage.data,Context.MODE_PRIVATE);
-//        String time = sp.getString(K.Storage.data_time, null);
-        // 重制时间
-         String time =  null;
-        if(time==null){
-            for (Integer[] t : defaultTime){
-                timeList.add(new TimeBean(t[0],t[1]));
-            }
-            sort(timeList);
-            return timeList;
-        }else{
-            String timeArr[] = time.split(";");
-            for(String timeItem : timeArr){
-                if(timeItem.length()<=0)
-                    continue;
-                String timeItemArr[] = timeItem.split(":");
-                timeList.add(new TimeBean(Integer.parseInt(timeItemArr[0].trim()), Integer.parseInt(timeItemArr[1].trim())));
-            }
-            sort(timeList);
-            return timeList;
-        }
-    }
-
-    private void setData(){
-        String data = "";
-        for(int i = 0; i<clockTable.getChildCount();i++){
-            TableRow tr = (TableRow)clockTable.getChildAt(i);
-            TextView tv = (TextView)tr.getChildAt(0);
-            String text = tv.getText().toString();
-            if("".equals(text))
-                continue;
-            data += text+";";
-        }
-        sort(timeData);
-        SharedPreferences sp = getSharedPreferences(K.Storage.data,Context.MODE_PRIVATE);
-        sp.edit().putString(K.Storage.data_time , data).commit();
-    }
-
     /**
-     * 创建界面定时工具
-     * @param index
+     * 添加日志到控件
      */
-    private void createTable(final int index){
-        TableRow tableRow = new TableRow(this);
-        TableRow.LayoutParams rowLayout = new TableRow.LayoutParams();
-        rowLayout.width = TableRow.LayoutParams.MATCH_PARENT;
-        rowLayout.height = TableRow.LayoutParams.MATCH_PARENT;
-        tableRow.setLayoutParams(rowLayout);
-
-        TableRow.LayoutParams tv_layout = new TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 2);
-
-        TextView textView = new TextView(this);
-        textView.setLayoutParams(tv_layout);
-
-        if(index<timeData.size())
-            textView.setText(Util.format(timeData.get(index).getHour())+":"+Util.format(timeData.get(index).getMinute()));
-        else {
-            textView.setText(null);
-        }
-        tableRow.addView(textView);
-
-        TableRow.LayoutParams layout = new TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-
-        Button btn_set = new Button(this);
-        btn_set.setLayoutParams(layout);
-        btn_set.setText(R.string.btn_set);
-        btn_set.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                TableRow tr = (TableRow)view.getParent();
-                TextView tv = (TextView)tr.getChildAt(0);
-                setTime(tv, index);
-            }
-        });
-        tableRow.addView(btn_set);
-
-        Button btn_del = new Button(this);
-        btn_del.setLayoutParams(layout);
-        btn_del.setText(R.string.btn_del);
-        btn_del.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                TableRow tr = (TableRow)view.getParent();
-                TextView tv = (TextView)tr.getChildAt(0);
-                tv.setText("");
-            }
-        });
-        tableRow.addView(btn_del);
-
-        clockTable.addView(tableRow);
-    }
-
-    // 设置时间
-    private void setTime(final TextView tv, final Integer index){
-        calendar.setTimeInMillis(System.currentTimeMillis());
-        new TimePickerDialog(this,
-            new TimePickerDialog.OnTimeSetListener() {
-                @Override
-                public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
-                    Integer timeArr[] = {hourOfDay,minute};
-                    String timeStr = Util.format(hourOfDay)+":"+Util.format(minute);
-                    timeData.remove(index);
-                    timeData.add(new TimeBean(timeArr[0],timeArr[1]));
-                    tv.setText(timeStr);
-                }
-            }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true).show();
-    }
-
-    /**
-     * 关闭定时
-     * 删除定时任务
-     */
-    private void setAlarmOff(){
-        Util.clearAlarm(this,AlarmReceiver.class,0);
-        Util.showToast(this,"清除定时任务");
-    }
-
-    /**
-     * 获取最近的时间
-     * @return bean
-     */
-    private TimeBean getNearestTimeBean(){
-        long timeMillies = System.currentTimeMillis();
-        calendar.setTimeInMillis(timeMillies);
-        TimeBean timeBean = null;
-        for(TimeBean tb : timeData){
-            calendar.set(Calendar.HOUR_OF_DAY, tb.getHour());
-            calendar.set(Calendar.MINUTE, tb.getMinute());
-            if(timeMillies < calendar.getTimeInMillis()){
-                timeBean = tb;
-                break;
-            }
-        }
-        return timeBean;
-    }
-
-    private String callClockTime = "";
-
-    /**
-     * 窗口恢复
-     */
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        addLog2View();
-
-        int callClock = -1;
-        if(getIntent()!=null)
-            callClock = getIntent().getIntExtra(K.Intent.callClock, -1);
-
-        Log.e(K.TAG,"--->"+callClock);
-
-        if(callClock==0){
-            Util.doLog(this,"--开始打卡--", K.LogCode.flowLog);
-
-            String callClockTime = getIntent().getStringExtra(K.Intent.callClockTime);
-            if(!this.callClockTime.equals(callClockTime)){// 时间
-                this.callClockTime = callClockTime;
-
-                // 清空旧定时任务
-                Util.clearAlarm(this,AlarmReceiver.class,0);
-                // 获取下一个定时任务时间
-                TimeBean timeBean = getNearestTimeBean();
-                // 设置下一个定时任务
-                setAlarmOn(timeBean);
-                // 启动钉钉
-                Util.callDingDing(this);
-            }
-        }else if(callClock==1){
-            // 2s后回到主页面, 并熄灭屏幕
-            new Handler().postDelayed(new Runnable(){
-                public void run() {
-                    callHome();
-                    policyManager.lockNow();
-                    Util.doLog(MainActivity.this,"--打卡结束--", K.LogCode.flowLog);
-                }
-            }, 2*1000);
-        }
-        setIntent(null);
-    }
-
     private void addLog2View(){
         String[] logData = Util.getLog(this);
         if(logData!=null){
@@ -410,25 +188,227 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void callHome(){
-        Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_MAIN);// "android.intent.action.MAIN"
-        intent.addCategory(Intent.CATEGORY_HOME); //"android.intent.category.HOME"
-        startActivity(intent);
+    /**
+     * 创建界面定时工具
+     * @param timeData data
+     */
+    private void createTable(TimeBean timeData){
+        TableRow tableRow = new TableRow(this);
+        TableRow.LayoutParams rowLayout = new TableRow.LayoutParams();
+        rowLayout.width = TableRow.LayoutParams.MATCH_PARENT;
+        rowLayout.height = TableRow.LayoutParams.MATCH_PARENT;
+        tableRow.setLayoutParams(rowLayout);
+
+        TableRow.LayoutParams tv_layout = new TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 2);
+
+        TextView textView = new TextView(this);
+        textView.setLayoutParams(tv_layout);
+
+        if(timeData!=null) {
+            textView.setText(String.format(getResources().getString(R.string.timeFormat),Util.formatInteger(timeData.getHour()),Util.formatInteger(timeData.getMinute())));
+        } else {
+            textView.setText(null);
+        }
+        tableRow.addView(textView);
+
+        TableRow.LayoutParams layout = new TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+
+        Button btn_set = new Button(this);
+        btn_set.setLayoutParams(layout);
+        btn_set.setText(R.string.btn_set);
+        btn_set.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TableRow tr = (TableRow)view.getParent();
+                TextView tv = (TextView)tr.getChildAt(0);
+                setTime(tv);
+            }
+        });
+        tableRow.addView(btn_set);
+
+        Button btn_del = new Button(this);
+        btn_del.setLayoutParams(layout);
+        btn_del.setText(R.string.btn_del);
+        btn_del.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TableRow tr = (TableRow)view.getParent();
+                TextView tv = (TextView)tr.getChildAt(0);
+                tv.setText("");
+                // 更新并保存数据
+                saveTimeData();
+            }
+        });
+        tableRow.addView(btn_del);
+
+        clockTable.addView(tableRow);
+    }
+
+    private void setAlarmOn(){
+        List<TimeBean> timeData = getData();
+        boolean isNextDay = false;
+        // 打开界面-点击开始，不知道上次执行的时间
+        // 取最近的
+        TimeBean time = getNearestTimeBean();
+        if(time == null) {
+            isNextDay = true;
+            time = timeData.get(0);
+        }
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(System.currentTimeMillis());
+        if(isNextDay){
+            calendar.add(Calendar.DAY_OF_MONTH,1);
+        }
+
+        calendar.set(Calendar.HOUR_OF_DAY, time.getHour());
+        calendar.set(Calendar.MINUTE, time.getMinute());
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        Log.d(K.TAG,"next time: "+calendar.getTime());
+
+        // 建立Intent和PendingIntent来调用目标组件
+        Intent intent = new Intent(this, AlarmReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(MainActivity.this, 0, intent, 0);
+        // 获取闹钟管理的实例
+        AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
+        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+
+        String msg = "设置闹钟时间为 "+Util.formatInteger(calendar.get(Calendar.MONTH)+1)+"-"+Util.formatInteger(calendar.get(Calendar.DAY_OF_MONTH))+" " +
+                Util.formatInteger(calendar.get(Calendar.HOUR_OF_DAY)) + ":" + Util.formatInteger(calendar.get(Calendar.MINUTE));
+
+        Util.showToast(this, msg);
+        Util.callHome(this);
+    }
+
+    //获取存储的时间数据
+    private List<TimeBean> getData(){
+        Integer[][] defaultTime = {{8,30},{12,0},{12,10},{18,0}};
+
+        List<TimeBean> timeList = new ArrayList<>();
+
+        SharedPreferences sp = getSharedPreferences(K.Storage.data,Context.MODE_PRIVATE);
+        String time = sp.getString(K.Storage.data_time, null);
+        // for test 重制时间
+        // String time =  null;
+        if(time==null){
+            for (Integer[] t : defaultTime){
+                timeList.add(new TimeBean(t[0],t[1]));
+            }
+        }else{
+            String[] timeArr = time.split(";");
+            for(String timeItem : timeArr){
+                if(timeItem.length()<=0)
+                    continue;
+                String[] timeItemArr = timeItem.split(":");
+                timeList.add(new TimeBean(Integer.parseInt(timeItemArr[0].trim()), Integer.parseInt(timeItemArr[1].trim())));
+            }
+        }
+        Util.sort(timeList);
+        return timeList;
     }
 
     /**
-     * key排序，由大到小
-     * @return list
+     * 保存时间
      */
-    public static List<TimeBean> sort(List<TimeBean> list) {
-        Collections.sort(list, new Comparator<TimeBean>() {
-            public int compare(TimeBean o1, TimeBean o2) {
-                return o1.toString().compareTo(o2.toString());
-            }
-        });
-        return list;
+    private void saveTimeData(){
+        StringBuilder data = new StringBuilder();
+        for(int i = 0; i<clockTable.getChildCount();i++){
+            TableRow tr = (TableRow)clockTable.getChildAt(i);
+            TextView tv = (TextView)tr.getChildAt(0);
+            String text = tv.getText().toString();
+            if("".equals(text))
+                continue;
+            text = text + ";";
+            data.append(text);
+        }
+        SharedPreferences sp = getSharedPreferences(K.Storage.data,Context.MODE_PRIVATE);
+        sp.edit().putString(K.Storage.data_time , data.toString()).apply();
     }
+
+
+    /**
+     * 设置时间
+     * @param tv textview
+     */
+    private void setTime(final TextView tv){
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(System.currentTimeMillis());
+        new TimePickerDialog(this,
+            new TimePickerDialog.OnTimeSetListener() {
+                @Override
+                public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                    // 更新控件文本
+                    String timeStr = Util.formatInteger(hourOfDay)+":"+Util.formatInteger(minute);
+                    tv.setText(timeStr);
+                    // 更新并保存数据
+                    saveTimeData();
+                }
+            }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true).show();
+    }
+
+    /**
+     * 获取最近的时间
+     * @return bean
+     */
+    private TimeBean getNearestTimeBean(){
+        List<TimeBean> timeData = getData();
+        long timeMillies = System.currentTimeMillis();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(timeMillies);
+        TimeBean timeBean = null;
+        for(TimeBean tb : timeData){
+            calendar.set(Calendar.HOUR_OF_DAY, tb.getHour());
+            calendar.set(Calendar.MINUTE, tb.getMinute());
+            if(timeMillies < calendar.getTimeInMillis()){
+                timeBean = tb;
+                break;
+            }
+        }
+        return timeBean;
+    }
+
+    /**
+     * 窗口恢复
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        addLog2View();
+
+        int callClock = K.Intent.callClock_None;
+        if(getIntent()!=null)
+            callClock = getIntent().getIntExtra(K.Intent.callClock, K.Intent.callClock_None);
+
+        // 执行打卡
+        if(callClock==K.Intent.callClock_Wakeup){
+
+            boolean isGetLogData = getIntent().getBooleanExtra(K.Intent.isGetLogData, false);
+            if(isGetLogData)
+                Util.doLog(this,"=====开始获取日志=====", K.LogCode.flowLog);
+            else
+                Util.doLog(this,"=====开始打卡=====", K.LogCode.flowLog);
+
+            // 启动钉钉
+            Util.callDingDing(this, isGetLogData);
+        // 打卡完毕回调
+        }else if(callClock==K.Intent.callClock_Recall){
+            Util.callHome(this);
+            // 清空旧定时任务
+            Util.clearAlarm(this);
+            // 获取下一个定时任务时间, 设置下一个定时任务
+            setAlarmOn();
+            Util.doLog(MainActivity.this,"=====打卡结束=====", K.LogCode.flowLog);
+            // 2s后回到主页面, 并熄灭屏幕
+            new Handler().postDelayed(new Runnable(){
+                public void run() {
+                    policyManager.lockNow();
+                }
+            }, 2*1000);
+        }
+        setIntent(null);
+    }
+
 
 
 }
