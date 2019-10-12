@@ -20,11 +20,15 @@ public class DingClockService extends AccessibilityService {
 
     private StringBuilder checkInLogData = null;
 
+    private static int searchCheckInButtonCount = 0;
+    private final int searchCheckInButtonCountLimit = 5;
+
     public DingClockService() {  }
 
     public static void setStepReady(boolean isGetLogAction){
         DingClockService.step = 0;
         DingClockService.isGetLogAction = isGetLogAction;
+        DingClockService.searchCheckInButtonCount = 0;
     }
 
     @Override
@@ -160,22 +164,29 @@ public class DingClockService extends AccessibilityService {
 
         findAllChildNodes(allChildNodes, nodeInfo);
 
-        for (final AccessibilityNodeInfo node : allChildNodes) {
-            if(node!=null &&
-                    ("下班打卡".equals(node.getContentDescription()+"") || "上班打卡".equals(node.getContentDescription()+""))) {
-                if(!isGetLogAction){
-                    Log.d(K.TAG,"click【打卡】"+node);
-                    Util.doLog(this, "点击【打卡】按钮", K.LogCode.flowLog);
+        if(searchCheckInButtonCount < searchCheckInButtonCountLimit){// 最后一个下班卡打过后可能会找不到【打卡】的按钮
+            searchCheckInButtonCount++;
 
-                    new Handler().postDelayed(new Runnable() {
-                        public void run() {
-                            node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                        }
-                    }, 1000);
+            for (final AccessibilityNodeInfo node : allChildNodes) {
+                if(node!=null &&
+                        ("下班打卡".equals(node.getContentDescription()+"") || "上班打卡".equals(node.getContentDescription()+""))) {
+                    if(!isGetLogAction){
+                        Log.d(K.TAG,"click【打卡】"+node);
+                        Util.doLog(this, "点击【打卡】按钮", K.LogCode.flowLog);
+
+                        new Handler().postDelayed(new Runnable() {
+                            public void run() {
+                                node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                            }
+                        }, 1000);
+                    }
+                    step = 3;
+                    break;
                 }
-                step = 3;
-                break;
             }
+        }else{
+            Util.doLog(this, "找不到【打卡】按钮", K.LogCode.flowLog);
+            step = 3;
         }
 
         checkInLogData = new StringBuilder();
