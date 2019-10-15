@@ -382,7 +382,10 @@ public class MainActivity extends AppCompatActivity {
 
         // 执行打卡
         if(callClock==K.Intent.callClock_Wakeup){
-
+            // 清空旧定时任务
+            Util.clearAlarm(this);
+            // 获取下一个定时任务时间, 设置下一个定时任务
+            setAlarmOn();
             boolean isGetLogData = getIntent().getBooleanExtra(K.Intent.isGetLogData, false);
             if(isGetLogData)
                 Util.doLog(this,"=====开始获取日志=====", K.LogCode.flowLog);
@@ -394,10 +397,7 @@ public class MainActivity extends AppCompatActivity {
         // 打卡完毕回调
         }else if(callClock==K.Intent.callClock_Recall){
             Util.callHome(this);
-            // 清空旧定时任务
-            Util.clearAlarm(this);
-            // 获取下一个定时任务时间, 设置下一个定时任务
-            setAlarmOn();
+
             Util.doLog(MainActivity.this,"=====打卡结束=====", K.LogCode.flowLog);
             // 2s后回到主页面, 并熄灭屏幕
             new Handler().postDelayed(new Runnable(){
