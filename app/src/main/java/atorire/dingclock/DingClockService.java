@@ -40,27 +40,27 @@ public class DingClockService extends AccessibilityService {
 //            Log.d(K.TAG, "钉钉事件--->" + accessibilityEvent);
             // app窗口切换
             if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-                if(step==0) {// 前往【工作】标签页
+                if(DingClockService.step==0) {// 前往【工作】标签页
                     step1_gotoWorkPage();
                 }
-                if(step==4){// 返回【我的】页面
-                    step = -1;
+                if(DingClockService.step==4){// 返回【我的】页面
+                    DingClockService.step = -1;
                     step5_goBack2MinePage();
                 }
                 //通知栏事件
 //            }else if (eventType == AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED) {
                 // app内窗口切换
             } else if(eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED){
-                if(step==1){// 前往【打卡】页面
-                    step = -1;
+                if(DingClockService.step==1){// 前往【打卡】页面
+                    DingClockService.step = -1;
                     step2_gotoCheckInPage();
                 }
-                if(step==2){// 点击【打卡】
-                    step = -1;
+                if(DingClockService.step==2){// 点击【打卡】
+                    DingClockService.step = -1;
                     step3_doCheckIn();
                 }
-                if(step==3){// 获取点击打卡后的返回信息，通过判断是早退打卡还是正常打卡，得知是否正常打卡
-                    step = -1;
+                if(DingClockService.step==3){// 获取点击打卡后的返回信息，通过判断是早退打卡还是正常打卡，得知是否正常打卡
+                    DingClockService.step = -1;
                     if(!isGetLogAction){
                         step4_doGetResult();
                     }
@@ -114,7 +114,7 @@ public class DingClockService extends AccessibilityService {
                 Log.d(K.TAG, "click【工作】"+n);
                 Util.doLog(this, "点击【工作】标签页", K.LogCode.flowLog);
                 n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                step = 1;
+                DingClockService.step = 1;
                 break;
             }
         }
@@ -140,12 +140,12 @@ public class DingClockService extends AccessibilityService {
                         }
                     }, 1000);
 
-                    step = 2;
+                    DingClockService.step = 2;
                     break;
                 }
             }
         }
-        if(step!=2){
+        if(DingClockService.step!=2){
             new Handler().postDelayed(new Runnable(){
                 public void run() {
                     step2_gotoCheckInPage();
@@ -180,17 +180,32 @@ public class DingClockService extends AccessibilityService {
                             }
                         }, 1000);
                     }
-                    step = 3;
+                    DingClockService.step = 3;
                     break;
                 }
             }
         }else{
-            Util.doLog(this, "找不到【打卡】按钮", K.LogCode.flowLog);
-            step = 3;
+            boolean isInWorkPage = false;
+            for (final AccessibilityNodeInfo node : allChildNodes) {
+                if(node!=null){
+                    if("考勤打卡".equals(node.getContentDescription()+"")) {
+                        isInWorkPage = true;
+                    }
+                }
+            }
+            if (isInWorkPage == false) {
+                Util.doLog(this, "在打卡页找不到【打卡】按钮", K.LogCode.flowLog);
+                DingClockService.step = 3;
+            } else {
+                Util.doLog(this, "在工作页找不到【打卡】按钮", K.LogCode.flowLog);
+                DingClockService.step = 0;
+                step1_gotoWorkPage();
+                return;
+            }
         }
 
         checkInLogData = new StringBuilder();
-        if(step!=3){
+        if(DingClockService.step!=3){
             new Handler().postDelayed(new Runnable(){
                 public void run() {
                     step3_doCheckIn();
@@ -238,7 +253,7 @@ public class DingClockService extends AccessibilityService {
                 String description = node.getContentDescription()+"";
                 if(resultCode!= K.LogCode.none){
                     Log.d(K.TAG,"gotResult【resultCode】"+resultCode);
-                    step = 4;
+                    DingClockService.step = 4;
                     break;
                 }
                 if(description.startsWith("确定要打") || "不打卡".equals(description)){
@@ -249,7 +264,7 @@ public class DingClockService extends AccessibilityService {
             }
         }
 
-        if(step==4){
+        if(DingClockService.step==4){
             Util.doLog(this, "", resultCode);
             // go back
             this.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
@@ -275,12 +290,12 @@ public class DingClockService extends AccessibilityService {
                 Log.d(K.TAG, "click【我的】"+n);
                 Util.doLog(this, "返回【我的】标签页", K.LogCode.flowLog);
                 n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                step = -1;
+                DingClockService.step = -1;
                 break;
             }
         }
         if(!isGetLogAction){
-            if(step==-1){
+            if(DingClockService.step==-1){
                 new Handler().postDelayed(new Runnable(){
                     public void run() {
                         Util.doLog(DingClockService.this, "唤起DingClock主程序并息屏", K.LogCode.flowLog);
@@ -306,14 +321,14 @@ public class DingClockService extends AccessibilityService {
         }
 
         for(int i=0;i<nodeInfo.getChildCount();i++){
-            Log.w(K.TAG,"---"+step+"--->>"+nodeInfo.getChild(i));
+            Log.w(K.TAG,"---"+DingClockService.step+"--->>"+nodeInfo.getChild(i));
         }
         List<AccessibilityNodeInfo> allChildNodes = new ArrayList<>();
 
         findAllChildNodes(allChildNodes, nodeInfo);
 
         for (AccessibilityNodeInfo node : allChildNodes) {
-            Log.e(K.TAG,"==="+step+"--->>"+node);
+            Log.e(K.TAG,"==="+DingClockService.step+"--->>"+node);
 //            if(node!=null &&
 //                    ("下班打卡".equals(node.getContentDescription()) || "上班打卡".equals(node.getContentDescription()))) {
 //                node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
