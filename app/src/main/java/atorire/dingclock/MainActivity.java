@@ -11,6 +11,8 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
@@ -86,7 +88,13 @@ public class MainActivity extends AppCompatActivity {
 
                 // 获取闹钟管理的实例
                 AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+                // am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {// sdk>=23
+                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {// sdk<23
+                    am.setExact(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+                }
                 String tmpS = "设置闹钟时间为" + Util.formatInteger(calendar.get(Calendar.HOUR_OF_DAY)) + ":" + Util.formatInteger(calendar.get(Calendar.MINUTE));
 
                 Log.e("tag","123123--》"+tmpS);
@@ -181,7 +189,8 @@ public class MainActivity extends AppCompatActivity {
                 textView.setText(logData[i]);
                 if((logData[i]+"").indexOf("【打卡日志】")>0){
 
-                    textView.setTextColor(getResources().getColor(R.color.colorCheckInLogTxt,null));
+                    textView.setTextColor(Color.parseColor("#00ADAD"));
+//                            getResources().getColor(R.color.colorCheckInLogTxt,null));
                 }
                 ll.addView(textView);
             }
@@ -271,7 +280,12 @@ public class MainActivity extends AppCompatActivity {
         PendingIntent pendingIntent = PendingIntent.getBroadcast(MainActivity.this, 0, intent, 0);
         // 获取闹钟管理的实例
         AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
-        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+        // am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            am.setExact(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+        }
 
         String msg = "设置闹钟时间为 "+Util.formatInteger(calendar.get(Calendar.MONTH)+1)+"-"+Util.formatInteger(calendar.get(Calendar.DAY_OF_MONTH))+" " +
                 Util.formatInteger(calendar.get(Calendar.HOUR_OF_DAY)) + ":" + Util.formatInteger(calendar.get(Calendar.MINUTE));

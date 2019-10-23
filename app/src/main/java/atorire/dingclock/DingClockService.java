@@ -137,10 +137,10 @@ public class DingClockService extends AccessibilityService {
                     new Handler().postDelayed(new Runnable(){
                         public void run() {
                             node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                            DingClockService.step = 2;
                         }
                     }, 1000);
 
-                    DingClockService.step = 2;
                     break;
                 }
             }
