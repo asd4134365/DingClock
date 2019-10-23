@@ -387,7 +387,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
+        Util.unLockScreen(this);
         addLog2View();
 
         int callClock = K.Intent.callClock_None;

@@ -11,6 +11,8 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.ResolveInfo;
 import android.os.PowerManager;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
@@ -143,19 +145,27 @@ public class Util {
      * @param context context
      */
     static void wakeUpAndUnlock(Context context){
-        //屏锁管理器
-        KeyguardManager km= (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
-        KeyguardManager.KeyguardLock kl = km.newKeyguardLock("unLock");
-        //解锁
-        kl.disableKeyguard();
         //获取电源管理器对象
         PowerManager pm=(PowerManager) context.getSystemService(Context.POWER_SERVICE);
-        //获取PowerManager.WakeLock对象,后面的参数|表示同时传入两个值,最后的是LogCat里用的Tag
-        PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP|PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"DingClock:bright");
-        //点亮屏幕
-        wl.acquire();
-        //释放
-        wl.release();
+        boolean screenOn = pm.isScreenOn();
+        if(!screenOn){
+            //获取PowerManager.WakeLock对象,后面的参数|表示同时传入两个值,最后的是LogCat里用的Tag
+            PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP|PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"DingClock:bright");
+            //点亮屏幕
+            wl.acquire(10000);
+            //释放
+            wl.release();
+        }
+        //屏锁管理器
+        KeyguardManager km= (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+        KeyguardManager.KeyguardLock kl = km.newKeyguardLock("DingClock:unLock");
+        //解锁
+        kl.disableKeyguard();
+    }
+    static void unLockScreen(Activity a){
+        final Window win = a.getWindow();
+        win.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
+        win.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON | WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON);
     }
 
 
