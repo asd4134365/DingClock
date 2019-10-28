@@ -298,6 +298,8 @@ public class DingClockService extends AccessibilityService {
             if(DingClockService.step==-1){
                 new Handler().postDelayed(new Runnable(){
                     public void run() {
+//                        this.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME);
+                        Log.d(K.TAG,"唤起DingClock主程序并息屏");
                         Util.doLog(DingClockService.this, "唤起DingClock主程序并息屏", K.LogCode.flowLog);
                         Util.callSelfWhenCheckInFinish(DingClockService.this);
                     }

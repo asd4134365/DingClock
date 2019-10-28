@@ -11,8 +11,8 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.ResolveInfo;
 import android.os.PowerManager;
-import android.view.Window;
 import android.view.WindowManager;
+import android.view.Window;
 import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
@@ -91,7 +91,7 @@ public class Util {
      * 回调主程序执行打卡
      * @param c context
      */
-    static void callSelfAndDoCheckIn(Context c,boolean isGetLogData){
+    static void callSelfAndDoCheckIn(Context c, boolean isGetLogData){
         // 屏幕解锁
         Util.wakeUpAndUnlock(c);
         // 唤起主程序
@@ -102,7 +102,7 @@ public class Util {
         c.startActivity(i);
     }
 
-    static void callSelfWhenCheckInFinish(Context context){
+    static void callSelfWhenCheckInFinish(Service context){
         // 唤起主程序
         Intent i = new Intent(context, MainActivity.class);
         i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -148,9 +148,11 @@ public class Util {
         //获取电源管理器对象
         PowerManager pm=(PowerManager) context.getSystemService(Context.POWER_SERVICE);
         boolean screenOn = pm.isScreenOn();
+        String tag = "DingClock:WakeUpTag";
         if(!screenOn){
             //获取PowerManager.WakeLock对象,后面的参数|表示同时传入两个值,最后的是LogCat里用的Tag
-            PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP|PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"DingClock:bright");
+            // PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP|PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"DingClock:bright");
+            PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP|PowerManager.SCREEN_BRIGHT_WAKE_LOCK,tag);
             //点亮屏幕
             wl.acquire(10000);
             //释放
@@ -158,10 +160,12 @@ public class Util {
         }
         //屏锁管理器
         KeyguardManager km= (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
-        KeyguardManager.KeyguardLock kl = km.newKeyguardLock("DingClock:unLock");
+//        KeyguardManager.KeyguardLock kl = km.newKeyguardLock("DingClock:unLock");
+        KeyguardManager.KeyguardLock kl = km.newKeyguardLock(tag);
         //解锁
         kl.disableKeyguard();
     }
+    // 屏幕解锁
     static void unLockScreen(Activity a){
         final Window win = a.getWindow();
         win.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);

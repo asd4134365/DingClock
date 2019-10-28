@@ -74,7 +74,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Calendar calendar = Calendar.getInstance();
-                // TODO Auto-generated method stub
                 calendar.setTimeInMillis(System.currentTimeMillis());
 
                 calendar.add(Calendar.SECOND, 3);
@@ -273,6 +272,8 @@ public class MainActivity extends AppCompatActivity {
         calendar.set(Calendar.MINUTE, time.getMinute());
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
+        // Test
+        // calendar.add(Calendar.MINUTE, 01);
         Log.d(K.TAG,"next time: "+calendar.getTime());
 
         // 建立Intent和PendingIntent来调用目标组件
@@ -387,7 +388,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        Util.unLockScreen(this);
+
         addLog2View();
 
         int callClock = K.Intent.callClock_None;
