@@ -110,9 +110,9 @@ public class DingClockService extends AccessibilityService {
 
         List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText("工作");
         for (AccessibilityNodeInfo n : list) {
-            if("工作".equals(n.getContentDescription()+"")){
-                Log.d(K.TAG, "click【工作】"+n);
-                Util.doLog(this, "点击【工作】标签页", K.LogCode.flowLog);
+            if("工作台".equals(n.getContentDescription()+"")){
+                Log.d(K.TAG, "click【工作台】"+n);
+                Util.doLog(this, "点击【工作台】标签页", K.LogCode.flowLog);
                 n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                 DingClockService.step = 1;
                 break;
