@@ -108,8 +108,11 @@ public class DingClockService extends AccessibilityService {
             return;
         }
 
-        List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText("工作");
-        for (AccessibilityNodeInfo n : list) {
+        List<AccessibilityNodeInfo> allChildNodes = new ArrayList<>();
+
+        findAllChildNodes(allChildNodes, nodeInfo);
+//        List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText("工作台");
+        for (AccessibilityNodeInfo n : allChildNodes) {
             if("工作台".equals(n.getContentDescription()+"")){
                 Log.d(K.TAG, "click【工作台】"+n);
                 Util.doLog(this, "点击【工作台】标签页", K.LogCode.flowLog);
@@ -258,7 +261,7 @@ public class DingClockService extends AccessibilityService {
                 }
                 if(description.startsWith("确定要打") || "不打卡".equals(description)){
                     resultCode = K.LogCode.fail;
-                }else if("我知道了".equals(description)){
+                }else if("我知道了".equals(description) || description.indexOf("成功")!=-1){
                     resultCode = K.LogCode.success;
                 }
             }
@@ -284,11 +287,13 @@ public class DingClockService extends AccessibilityService {
             Log.w(K.TAG, "rootWindow为空");
             return;
         }
-        List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText("我的");
-        for (AccessibilityNodeInfo n : list) {
-            if("我的".equals(n.getContentDescription())){
-                Log.d(K.TAG, "click【我的】"+n);
-                Util.doLog(this, "返回【我的】标签页", K.LogCode.flowLog);
+
+        List<AccessibilityNodeInfo> allChildNodes = new ArrayList<>();
+        findAllChildNodes(allChildNodes, nodeInfo);
+        for (AccessibilityNodeInfo n : allChildNodes) {
+            if("通讯录".equals(n.getContentDescription())){
+                Log.d(K.TAG, "click【通讯录】"+n);
+                Util.doLog(this, "返回【通讯录】标签页", K.LogCode.flowLog);
                 n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                 DingClockService.step = -1;
                 break;
